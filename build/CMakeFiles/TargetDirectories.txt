@@ -1,0 +1,3 @@
+/Users/zecastro/Desktop/VC_Trabalho/build/CMakeFiles/VC_Project.dir
+/Users/zecastro/Desktop/VC_Trabalho/build/CMakeFiles/edit_cache.dir
+/Users/zecastro/Desktop/VC_Trabalho/build/CMakeFiles/rebuild_cache.dir
