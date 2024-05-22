@@ -76,6 +76,8 @@
         "format": "cpp",
         "stop_token": "cpp",
         "text_encoding": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "semaphore": "cpp",
+        "shared_mutex": "cpp"
     }
 }

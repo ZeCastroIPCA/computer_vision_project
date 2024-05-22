@@ -10,6 +10,7 @@
 #define VC_DEBUG
 #define MAX_VC(a, b) (a > b ? a : b)
 #define MIN_VC(a, b) (a < b ? a : b)
+#define ABS_VC(a) (a < 0 ? -a : a)
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                   ESTRUTURA DE UMA IMAGEM
@@ -84,6 +85,8 @@ int vc_binary_area(IVC *src);
 int vc_segmentation_area(IVC *src);
 
 // FUN��ES: CONVERS�O DE IMAGENS
+int vc_bgr_to_rgb(IVC *src, IVC *dst);
+int vc_binary_to_3_channels(IVC *src, IVC *dst);
 int vc_gray_to_rgb(IVC *src, IVC *dst);
 int vc_hsv_to_rgb(IVC *src, IVC *dst);
 void hsv_to_rgb(int h, int s, int v, unsigned char *r, unsigned char *g, unsigned char *b);

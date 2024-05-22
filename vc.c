@@ -752,11 +752,11 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 	long int posX, posA, posB, posC, posD;
 	int labeltable[256] = {0};
 	int labelarea[256] = {0};
-	int label = 1; // Etiqueta inicial.
+	int label = 1; // Initial label.
 	int num, tmplabel;
-	OVC *blobs; // Apontador para array de blobs (objectos) que ser retornado desta funo.
+	OVC *blobs; // Pointer to array of blobs (objects) that will be returned by this function.
 
-	// Verificao de erros
+	// Error checking
 	if ((src->width <= 0) || (src->height <= 0) || (src->data == NULL))
 		return 0;
 	if ((src->width != dst->width) || (src->height != dst->height) || (src->channels != dst->channels))
@@ -767,20 +767,17 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 	if (channels != 1)
 		return NULL;
 
-	// Copia dados da imagem binria para imagem grayscale
+	// Copy binary image data to grayscale image
 	memcpy(datadst, datasrc, bytesperline * height);
 
-	// Todos os pixis de plano de fundo devem obrigatriamente ter valor 0
-	// Todos os pixis de primeiro plano devem obrigatriamente ter valor 255
-	// Sero atribudas etiquetas no intervalo [1,254]
-	// Este algoritmo est assim limitado a 254 labels
+	// Ensure all background pixels are 0 and foreground pixels are 255
 	for (i = 0, size = bytesperline * height; i < size; i++)
 	{
 		if (datadst[i] != 0)
 			datadst[i] = 255;
 	}
 
-	// Limpa os rebordos da imagem binria
+	// Clear the borders of the binary image
 	for (y = 0; y < height; y++)
 	{
 		datadst[y * bytesperline + 0 * channels] = 0;
@@ -793,7 +790,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 		datadst[(height - 1) * bytesperline + x * channels] = 0;
 	}
 
-	// Efectua a etiquetagem
+	// First pass: initial labeling
 	for (y = 1; y < height - 1; y++)
 	{
 		for (x = 1; x < width - 1; x++)
@@ -808,7 +805,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 			posD = y * bytesperline + (x - 1) * channels;		// D
 			posX = y * bytesperline + x * channels;				// X
 
-			// Se o pixel foi marcado
+			// If the pixel is marked
 			if (datadst[posX] != 0)
 			{
 				if ((datadst[posA] == 0) && (datadst[posB] == 0) && (datadst[posC] == 0) && (datadst[posD] == 0))
@@ -821,24 +818,24 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 				{
 					num = 255;
 
-					// Se A est marcado
+					// If A is marked
 					if (datadst[posA] != 0)
 						num = labeltable[datadst[posA]];
-					// Se B est marcado, e  menor que a etiqueta "num"
+					// If B is marked and smaller than label "num"
 					if ((datadst[posB] != 0) && (labeltable[datadst[posB]] < num))
 						num = labeltable[datadst[posB]];
-					// Se C est marcado, e  menor que a etiqueta "num"
+					// If C is marked and smaller than label "num"
 					if ((datadst[posC] != 0) && (labeltable[datadst[posC]] < num))
 						num = labeltable[datadst[posC]];
-					// Se D est marcado, e  menor que a etiqueta "num"
+					// If D is marked and smaller than label "num"
 					if ((datadst[posD] != 0) && (labeltable[datadst[posD]] < num))
 						num = labeltable[datadst[posD]];
 
-					// Atribui a etiqueta ao pixel
+					// Assign label to pixel
 					datadst[posX] = num;
 					labeltable[num] = num;
 
-					// Actualiza a tabela de etiquetas
+					// Update the label table
 					if (datadst[posA] != 0)
 					{
 						if (labeltable[datadst[posA]] != num)
@@ -896,7 +893,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 		}
 	}
 
-	// Volta a etiquetar a imagem
+	// Second pass: relabel the image
 	for (y = 1; y < height - 1; y++)
 	{
 		for (x = 1; x < width - 1; x++)
@@ -910,10 +907,58 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 		}
 	}
 
-	// printf("\nMax Label = %d\n", label);
+	// Merge blobs that are close to each other (within 30 pixels)
+	for (y = 1; y < height - 1; y++)
+	{
+		for (x = 1; x < width - 1; x++)
+		{
+			posX = y * bytesperline + x * channels; // X
 
-	// Contagem do nmero de blobs
-	// Passo 1: Eliminar, da tabela, etiquetas repetidas
+			if (datadst[posX] != 0)
+			{
+				for (int dy = -10; dy <= 10; dy++)
+				{
+					for (int dx = 0; dx <= 35; dx++)
+					{
+						int nx = x + dx;
+						int ny = y + dy;
+
+						if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+						{
+							int posN = ny * bytesperline + nx * channels;
+							if (datadst[posN] != 0 && datadst[posN] != datadst[posX])
+							{
+								int minLabel = (datadst[posX] < datadst[posN]) ? datadst[posX] : datadst[posN];
+								int maxLabel = (datadst[posX] > datadst[posN]) ? datadst[posX] : datadst[posN];
+								for (i = 0; i < size; i++)
+								{
+									if (datadst[i] == maxLabel)
+										datadst[i] = minLabel;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Re-label the image after merging close blobs
+	for (y = 1; y < height - 1; y++)
+	{
+		for (x = 1; x < width - 1; x++)
+		{
+			posX = y * bytesperline + x * channels; // X
+
+			if (datadst[posX] != 0)
+			{
+				datadst[posX] = labeltable[datadst[posX]];
+			}
+		}
+	}
+
+	// Count the number of blobs
+	// Step 1: Remove repeated labels from the table
 	for (a = 1; a < label - 1; a++)
 	{
 		for (b = a + 1; b < label; b++)
@@ -922,25 +967,25 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 				labeltable[b] = 0;
 		}
 	}
-	// Passo 2: Conta etiquetas e organiza a tabela de etiquetas, para que no hajam valores vazios (zero) entre etiquetas
+	// Step 2: Count labels and organize the label table to remove empty values (zeros) between labels
 	*nlabels = 0;
 	for (a = 1; a < label; a++)
 	{
 		if (labeltable[a] != 0)
 		{
-			labeltable[*nlabels] = labeltable[a]; // Organiza tabela de etiquetas
-			(*nlabels)++;						  // Conta etiquetas
+			labeltable[*nlabels] = labeltable[a]; // Organize label table
+			(*nlabels)++;						  // Count labels
 		}
 	}
 
-	// Se no h blobs
+	// If no blobs are found
 	if (*nlabels == 0)
 	{
-		printf("vc_binary_blob_labelling() --> No objects found!\n");
+		//printf("vc_binary_blob_labelling() --> No objects found!\n");
 		return NULL;
 	}
 
-	// Cria lista de blobs (objectos) e preenche a etiqueta
+	// Create list of blobs (objects) and fill the label
 	blobs = (OVC *)calloc((*nlabels), sizeof(OVC));
 	if (blobs != NULL)
 	{
@@ -1792,6 +1837,89 @@ int vc_binary_area(IVC *src)
 	return count;
 }
 
+// Converter uma imagem BGR para uma imagem RGB
+int vc_bgr_to_rgb(IVC *src, IVC *dst)
+{
+	if (src == NULL || dst == NULL || src->data == NULL || dst->data == NULL)
+		return 0;
+	if (src->width != dst->width || src->height != dst->height || src->channels != 3 || dst->channels != 3)
+		return 0;
+
+	unsigned char *datasrc = (unsigned char *)src->data;
+	unsigned char *datadst = (unsigned char *)dst->data;
+	int width = src->width;
+	int height = src->height;
+	int channels_src = src->channels;
+	int channels_dst = dst->channels;
+	int x, y;
+	long int pos_src, pos_dst;
+
+	// converter imagem BGR para imagem RGB
+	for (y = 0; y < height; y++)
+	{
+		for (x = 0; x < width; x++)
+		{
+			pos_src = y * width * 3 + x * 3;
+			pos_dst = y * width * 3 + x * 3;
+
+			datadst[pos_dst] = datasrc[pos_src + 2];
+			datadst[pos_dst + 1] = datasrc[pos_src + 1];
+			datadst[pos_dst + 2] = datasrc[pos_src];
+		}
+	}
+
+	return 1;
+}
+
+// Convert a grayscale image to a 3-level image
+int vc_binary_to_3_channels(IVC *src, IVC *dst)
+{
+	if (src == NULL || dst == NULL || src->data == NULL || dst->data == NULL)
+	{
+		printf("Error -> vc_binary_to_3_channels():\n\tImage is empty!\n");
+		return 0;
+	}
+	if (src->width != dst->width || src->height != dst->height || src->channels != 1 || dst->channels != 3)
+	{
+		printf("Error -> vc_binary_to_3_channels():\n\tImages dimensions or channels mismatch!\n");
+		return 0;
+	}
+
+	unsigned char *datasrc = (unsigned char *)src->data;
+	unsigned char *datadst = (unsigned char *)dst->data;
+	int width = src->width;
+	int height = src->height;
+	int channels_src = src->channels;
+	int channels_dst = dst->channels;
+	int x, y;
+	long int pos_src, pos_dst;
+
+	// converter imagem binária para imagem com 3 canais
+	for (y = 0; y < height; y++)
+	{
+		for (x = 0; x < width; x++)
+		{
+			pos_src = y * width + x;
+			pos_dst = y * width * 3 + x * 3;
+
+			if (datasrc[pos_src] == 0)
+			{
+				datadst[pos_dst] = 0;
+				datadst[pos_dst + 1] = 0;
+				datadst[pos_dst + 2] = 0;
+			}
+			else
+			{
+				datadst[pos_dst] = 255;
+				datadst[pos_dst + 1] = 255;
+				datadst[pos_dst + 2] = 255;
+			}
+		}
+	}
+
+	return 1;
+}
+
 // Converter uma imagem cinzenta para uma imagem RGB
 int vc_gray_to_rgb(IVC *src, IVC *dst)
 {
@@ -1871,7 +1999,7 @@ int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int sm
 	}
 	if (src->width != dst->width || src->height != dst->height || src->channels != 3 || dst->channels != 1)
 	{
-		printf("Error -> vc_hsv_segmentation():\n\tImage is not RGB!\n");
+		printf("Error -> vc_hsv_segmentation():\n\tImages dimensions or channels mismatch!\n");
 		return 0;
 	}
 

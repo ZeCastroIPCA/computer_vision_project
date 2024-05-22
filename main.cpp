@@ -37,16 +37,21 @@ void vc_timer(void)
 
 int main(void)
 {
-	/* Leitura de v�deo de um ficheiro */
+	// Decralação de uma variável para capturar o vídeo
 	cv::VideoCapture capture;
-	int apiPreference = cv::CAP_AVFOUNDATION; 
-	/* Verifica se foi poss�vel abrir o ficheiro de v�deo */
-	if (!capture.open("/Users/zecastro/Desktop/VC_Trabalho/video_resistors.mp4", apiPreference))
+	// Escolha de qual método usar para ler
+	int apiPreference = cv::CAP_AVFOUNDATION;
+	// Captura do vídeo
+	capture.open("/Users/zecastro/Desktop/VC_Trabalho/video_resistors.mp4", apiPreference);
+	// Verificar foi possível abrir o ficheiro
+	if (!capture.isOpened())
 	{
+		// Em caso de falha, imprime mensagem de erro para o terminal
 		std::cerr << "Erro ao abrir o ficheiro de v�deo!\n";
 		return 1;
 	}
 
+	// Estrutura para armazenar informações do vídeo
 	struct
 	{
 		int width, height;
@@ -55,50 +60,59 @@ int main(void)
 		int nframe;
 	} video;
 
-	// Outros
+	// Declaração de variável para melhor legibilidade do código
 	std::string str;
+	// Declaração de variável para armazenar a tecla premida pelo utilizador
 	int key = 0;
 
-	/* N�mero total de frames no v�deo */
+	// Total de frames do vídeo
 	video.ntotalframes = (int)capture.get(cv::CAP_PROP_FRAME_COUNT);
 	std::cout << "Total de frames: " << video.ntotalframes << std::endl;
-	/* Frame rate do v�deo */
+	// Frame rate do vídeo
 	video.fps = (int)capture.get(cv::CAP_PROP_FPS);
 	std::cout << "Frame rate: " << video.fps << std::endl;
-	/* Resolu��o do v�deo */
+	// Resolução do vídeo
 	video.width = (int)capture.get(cv::CAP_PROP_FRAME_WIDTH);
 	video.height = (int)capture.get(cv::CAP_PROP_FRAME_HEIGHT);
-	std::cout << "Resolu��o: " << video.width << "x" << video.height << std::endl;
+	std::cout << "Resolução: " << video.width << "x" << video.height << std::endl;
 
-	/* Cria uma janela para exibir o vídeo */
+	// Criação de uma janela
 	cv::namedWindow("VC - VIDEO", cv::WINDOW_AUTOSIZE);
-	// se a janela não foi criada, imprime uma mensagem de erro e termina o programa
+	// Verificar se a janela foi criada
+	if (!cv::getWindowProperty("VC - VIDEO", cv::WND_PROP_AUTOSIZE))
+	{
+		// Se a janela não for criada, imprime uma mensagem de erro e terminar o programa
+		std::cerr << "Erro ao criar a janela!\n";
+		return 1;
+	}
 
-	/* Inicia o timer */
+	// Iniciar o cronómetro
 	vc_timer();
 
-	/* Captura e processamento de cada frame do v�deo */
+	// Ciclo para capturar e processar cada frame do vídeo
+	// Declaração de uma variável para armazenar o frame do vídeo
 	cv::Mat frame;
 	while (key != 'q')
 	{
-		/* Captura do frame do vídeo */
-		if (!capture.read(frame))
+		// Verifica se o frame foi lido corretamente e se o número de frames lidos é o último
+		if (!capture.read(frame) && video.nframe != video.ntotalframes)
 		{
+			// Em caso de erro, imprime mensagem de erro para o terminal
 			std::cerr << "Erro: não foi possível ler o frame do vídeo!\n";
 			break;
 		}
 
-		/* Verifica se o frame está vazio */
+		// Verifica se o frame está vazio
 		if (frame.empty())
 		{
-			std::cerr << "Erro: o frame do vídeo está vazia!\n";
+			// Quebra o ciclo // O programa só deve entrar aqui se o vídeo acabar!
 			break;
 		}
 
-		/* Número do frame a processar */
+		// Número do frame a processar
 		video.nframe = (int)capture.get(cv::CAP_PROP_POS_FRAMES);
 
-		/* Exemplo de inser��o texto na frame */
+		// Escrita de informações do vídeo no frame
 		str = std::string("RESOLUCAO: ").append(std::to_string(video.width)).append("x").append(std::to_string(video.height));
 		cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
 		cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
@@ -112,35 +126,80 @@ int main(void)
 		cv::putText(frame, str, cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
 		cv::putText(frame, str, cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
 
-		// Fa�a o seu c�digo aqui...
-		/*
-		// Cria uma nova imagem IVC
-		IVC *image = vc_image_new(video.width, video.height, 3, 255);
-		// Copia dados de imagem da estrutura cv::Mat para uma estrutura IVC
-		memcpy(image->data, frame.data, video.width * video.height * 3);
-		// Executa uma fun��o da nossa biblioteca vc
-		vc_rgb_get_green(image);
-		// Copia dados de imagem da estrutura IVC para uma estrutura cv::Mat
-		memcpy(frame.data, image->data, video.width * video.height * 3);
-		// Liberta a mem�ria da imagem IVC que havia sido criada
-		vc_image_free(image);
-		*/
-		// +++++++++++++++++++++++++
+		// Criação de novas imagens IVC
+		IVC *img[7];
 
-		/* Exibe o frame */
+		// TODO: Retirar a criação de novas imagens a cada processo, usar sempre a mesma.
+
+		// Atribuição de valor a um imagem IVC
+		img[0] = vc_image_new(video.width, video.height, 3, 255);
+
+		// Cópia do frame do vídeo para a imagem IVC
+		memcpy(img[0]->data, frame.data, video.width * video.height * 3);
+
+		// Transformação de uma imagem BGR para RGB
+		img[1] = vc_image_new(video.width, video.height, 3, 255);
+		vc_bgr_to_rgb(img[0], img[1]);
+
+		// Transformação de uma imagem RGB para HSV
+		img[2] = vc_image_new(video.width, video.height, 3, 255);
+		vc_rgb_to_hsv(img[1], img[2]);
+
+		// Segmentação de uma imagem HSV
+		img[3] = vc_image_new(video.width, video.height, 1, 255);
+		vc_hsv_segmentation(img[2], img[3], 20, 50, 40, 100, 30, 100);
+
+		// Pesquisa de blobs
+		int nblobs;
+		OVC *blobs = vc_binary_blob_labelling(img[3], img[3], &nblobs);
+		if (blobs != NULL)
+		{
+			// Informação dos blobs
+			vc_binary_blob_info(img[3], blobs, nblobs);
+
+			// Percorrer os blobs
+			for (int i = 0; i < nblobs; i++)
+			{
+				// Desenhar o centro de gravidade
+				vc_draw_of_gravity(img[3], &blobs[i]);
+				// Desenhar o retângulo
+				vc_draw_border_box(img[3], &blobs[i]);
+			}
+		} else {
+			// fechar a janela e terminar o programa
+			cv::destroyWindow("VC - VIDEO");
+			std::cerr << "Erro: não foi possível encontrar blobs na imagem!\n";
+			return 1;
+		}
+
+		// Transformação de uma imagem binária para 3 canais
+		img[4] = vc_image_new(video.width, video.height, 3, 255);
+		vc_binary_to_3_channels(img[3], img[4]);
+
+		// Copia a imagem IVC para o frame
+		memcpy(frame.data, img[4]->data, video.width * video.height * 3);
+
+		// Liberta a memória da imagem IVC que havia sido criada
+		vc_image_free(img[0]);
+		vc_image_free(img[1]);
+		vc_image_free(img[2]);
+		vc_image_free(img[3]);
+		vc_image_free(img[4]);
+
+		// Exibe o frame
 		cv::imshow("VC - VIDEO", frame);
 
-		/* Sai da aplica��o, se o utilizador premir a tecla 'q' */
+		// Sai da aplicação, se o utilizador premir a tecla 'q'
 		key = cv::waitKey(1);
 	}
 
-	/* Para o timer e exibe o tempo decorrido */
+	// Para o timer e exibe o tempo decorrido
 	vc_timer();
 
-	/* Fecha a janela */
+	// Fecha a janela
 	cv::destroyWindow("VC - VIDEO");
 
-	/* Fecha o ficheiro de v�deo */
+	// Fecha o ficheiro de v�deo
 	capture.release();
 
 	return 0;
