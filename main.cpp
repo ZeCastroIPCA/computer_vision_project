@@ -155,19 +155,20 @@ int main(void)
 
 		// Pesquisa de blobs
 		int nblobs;
-		OVC *blobs = vc_binary_blob_labelling(img[4], img[4], &nblobs);
+		img[5] = vc_image_new(video.width, video.height, 1, 255);
+		OVC *blobs = vc_binary_blob_labelling(img[4], img[5], &nblobs);
 		if (blobs != NULL)
 		{
 			// Informação dos blobs
-			vc_binary_blob_info(img[4], blobs, nblobs);
+			vc_binary_blob_info(img[5], blobs, nblobs);
 
 			// Percorrer os blobs
 			for (int i = 0; i < nblobs; i++)
 			{
 				// Desenhar o centro de gravidade
-				vc_draw_of_gravity(img[4], &blobs[i]);
+				vc_draw_of_gravity(img[5], &blobs[i]);
 				// Desenhar o retângulo
-				vc_draw_border_box(img[4], &blobs[i]);
+				vc_draw_border_box(img[5], &blobs[i]);
 			}
 		} else {
 			// fechar a janela e terminar o programa
@@ -177,11 +178,11 @@ int main(void)
 		}
 
 		// Transformação de uma imagem binária para 3 canais
-		img[5] = vc_image_new(video.width, video.height, 3, 255);
-		vc_binary_to_3_channels(img[4], img[5]);
+		img[6] = vc_image_new(video.width, video.height, 3, 255);
+		vc_binary_to_3_channels(img[5], img[6]);
 
 		// Copia a imagem IVC para o frame
-		memcpy(frame.data, img[5]->data, video.width * video.height * 3);
+		memcpy(frame.data, img[6]->data, video.width * video.height * 3);
 
 		// Liberta a memória da imagem IVC que havia sido criada
 		vc_image_free(img[0]);
@@ -190,6 +191,7 @@ int main(void)
 		vc_image_free(img[3]);
 		vc_image_free(img[4]);
 		vc_image_free(img[5]);
+		vc_image_free(img[6]);
 
 		// Exibe o frame
 		cv::imshow("VC - VIDEO", frame);
