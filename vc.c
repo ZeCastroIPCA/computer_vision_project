@@ -651,21 +651,29 @@ int vc_draw_of_gravity(IVC *srcdst, OVC *blob)
 {
 	int c, x, y;
 
-	// draw vertical line
-	for (y = blob->yc - 2; y < blob->yc + 3; y++)
+	// Linha vertical
+	for (y = blob->yc - 2; y <= blob->yc + 2; y++)
 	{
-		for (c = 0; c < srcdst->channels; c++)
+		// Verificar se y está dentro dos limites da imagem
+		if (y >= 0 && y < srcdst->height)
 		{
-			srcdst->data[y * srcdst->bytesperline + blob->xc * srcdst->channels + c] = 0;
+			for (c = 0; c < srcdst->channels; c++)
+			{
+				srcdst->data[y * srcdst->bytesperline + blob->xc * srcdst->channels + c] = 255;
+			}
 		}
 	}
 
-	// draw horizontal line
-	for (x = blob->xc - 2; x < blob->xc + 3; x++)
+	// Linha horizontal
+	for (x = blob->xc - 2; x <= blob->xc + 2; x++)
 	{
-		for (c = 0; c < srcdst->channels; c++)
+		// Verificar se x está dentro dos limites da imagem
+		if (x >= 0 && x < srcdst->width)
 		{
-			srcdst->data[blob->yc * srcdst->bytesperline + x * srcdst->channels + c] = 0;
+			for (c = 0; c < srcdst->channels; c++)
+			{
+				srcdst->data[blob->yc * srcdst->bytesperline + x * srcdst->channels + c] = 255;
+			}
 		}
 	}
 
@@ -676,21 +684,27 @@ int vc_draw_border_box(IVC *srcdst, OVC *blob)
 {
 	int c, x, y;
 
+	// Bordas verticais
 	for (y = blob->y; y < blob->y + blob->height; y++)
 	{
 		for (c = 0; c < srcdst->channels; c++)
 		{
-			srcdst->data[y * srcdst->bytesperline + blob->x * srcdst->channels] = 255;
-			srcdst->data[y * srcdst->bytesperline + (blob->x + blob->width - 1) * srcdst->channels] = 255;
+			// Esquerda
+			srcdst->data[y * srcdst->bytesperline + blob->x * srcdst->channels + c] = 255;
+			// Direita
+			srcdst->data[y * srcdst->bytesperline + (blob->x + blob->width - 1) * srcdst->channels + c] = 255;
 		}
 	}
 
+	// Bordas horizontais
 	for (x = blob->x; x < blob->x + blob->width; x++)
 	{
 		for (c = 0; c < srcdst->channels; c++)
 		{
-			srcdst->data[blob->y * srcdst->bytesperline + x * srcdst->channels] = 255;
-			srcdst->data[(blob->y + blob->height - 1) * srcdst->bytesperline + x * srcdst->channels] = 255;
+			// Superior
+			srcdst->data[blob->y * srcdst->bytesperline + x * srcdst->channels + c] = 255;
+			// Inferior
+			srcdst->data[(blob->y + blob->height - 1) * srcdst->bytesperline + x * srcdst->channels + c] = 255;
 		}
 	}
 
@@ -752,11 +766,11 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 	long int posX, posA, posB, posC, posD;
 	int labeltable[256] = {0};
 	int labelarea[256] = {0};
-	int label = 1; // Initial label.
+	int label = 1;
 	int num, tmplabel;
-	OVC *blobs; // Pointer to array of blobs (objects) that will be returned by this function.
+	OVC *blobs;
 
-	// Error checking
+	// Verificação de erros
 	if ((src->width <= 0) || (src->height <= 0) || (src->data == NULL))
 		return 0;
 	if ((src->width != dst->width) || (src->height != dst->height) || (src->channels != dst->channels))
@@ -981,7 +995,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 	// If no blobs are found
 	if (*nlabels == 0)
 	{
-		//printf("vc_binary_blob_labelling() --> No objects found!\n");
+		// printf("vc_binary_blob_labelling() --> No objects found!\n");
 		return NULL;
 	}
 

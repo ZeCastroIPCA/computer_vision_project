@@ -127,7 +127,7 @@ int main(void)
 		cv::putText(frame, str, cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
 
 		// Criação de novas imagens IVC
-		IVC *img[7];
+		IVC *img[9];
 
 		// TODO: Retirar a criação de novas imagens a cada processo, usar sempre a mesma.
 
@@ -166,37 +166,27 @@ int main(void)
 			for (int i = 0; i < nblobs; i++)
 			{
 				// Desenhar o centro de gravidade
-				vc_draw_of_gravity(img[5], &blobs[i]);
-				// Desenhar o retângulo
-				vc_draw_border_box(img[5], &blobs[i]);
+				vc_draw_of_gravity(img[0], &blobs[i]);
+				// Desenhar as bordas
+				vc_draw_border_box(img[0], &blobs[i]);
 			}
-		} else {
-			// fechar a janela e terminar o programa
-			cv::destroyWindow("VC - VIDEO");
-			std::cerr << "Erro: não foi possível encontrar blobs na imagem!\n";
-			return 1;
 		}
 
-		// Transformação de uma imagem binária para 3 canais
-		img[6] = vc_image_new(video.width, video.height, 3, 255);
-		vc_binary_to_3_channels(img[5], img[6]);
+		// Copiar a imagem IVC para o frame
+		memcpy(frame.data, img[0]->data, video.width * video.height * 3);
 
-		// Copia a imagem IVC para o frame
-		memcpy(frame.data, img[6]->data, video.width * video.height * 3);
-
-		// Liberta a memória da imagem IVC que havia sido criada
+		// Libertar memória das imagens
 		vc_image_free(img[0]);
 		vc_image_free(img[1]);
 		vc_image_free(img[2]);
 		vc_image_free(img[3]);
 		vc_image_free(img[4]);
 		vc_image_free(img[5]);
-		vc_image_free(img[6]);
 
 		// Exibe o frame
 		cv::imshow("VC - VIDEO", frame);
 
-		// Sai da aplicação, se o utilizador premir a tecla 'q'
+		// Sair da aplicação, se o utilizador premir a tecla 'q'
 		key = cv::waitKey(1);
 	}
 
