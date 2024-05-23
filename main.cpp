@@ -35,6 +35,98 @@ void vc_timer(void)
 	}
 }
 
+void identifyColorsInBorderBox(IVC *srcdst, OVC *blob)
+{
+	int x, y, count = 0;
+	int colorCounts[9] = {0}; // Array to hold counts for each color
+	const char *colorNames[] = {"White", "Black", "Red", "Orange", "Yellow", "Green", "Cyan", "Blue", "Purple"};
+	int numColors = sizeof(colorNames) / sizeof(colorNames[0]);
+
+	// Iterate through each pixel in the blob's bounding box
+	for (y = blob->y; y < blob->y + blob->height; y++)
+	{
+		for (x = blob->x; x < blob->x + blob->width; x++)
+		{
+			int index = y * srcdst->bytesperline + x * srcdst->channels;
+			int H = srcdst->data[index];
+			int S = srcdst->data[index + 1];
+			int V = srcdst->data[index + 2];
+
+			// Determine the color name based on HSV values
+			if (S < 50 && V > 200)
+			{
+				colorCounts[0]++; // White
+			}
+			else if (V < 50)
+			{
+				colorCounts[1]++; // Black
+			}
+			else
+			{
+				if (H < 10 || H >= 160)
+					colorCounts[2]++; // Red
+				else if (H < 25)
+					colorCounts[3]++; // Orange
+				else if (H < 35)
+					colorCounts[4]++; // Yellow
+				else if (H < 85)
+					colorCounts[5]++; // Green
+				else if (H < 110)
+					colorCounts[6]++; // Cyan
+				else if (H < 130)
+					colorCounts[7]++; // Blue
+				else
+					colorCounts[8]++; // Purple
+			}
+
+			count++;
+		}
+	}
+
+	// Determine the main colors present
+	int detectedColorsCount = 0;
+	for (int i = 0; i < numColors; i++)
+	{
+		if (colorCounts[i] > 0)
+		{
+			detectedColorsCount++;
+		}
+	}
+
+	// Allocate memory to hold the detected colors
+	char **detectedColors = (char **)malloc(detectedColorsCount * sizeof(char *));
+	int j = 0;
+	for (int i = 0; i < numColors; i++)
+	{
+		if (colorCounts[i] > 0)
+		{
+			detectedColors[j] = (char *)malloc((strlen(colorNames[i]) + 1) * sizeof(char));
+			strcpy(detectedColors[j], colorNames[i]);
+			j++;
+		}
+	}
+
+	// Print the detected colors and separate them by blobs and only print the colors once per blob
+	if (detectedColorsCount > 0)
+	{
+		std::cout << "Detected colors in blob " << blob->label << ": ";
+		for (int i = 0; i < detectedColorsCount; i++)
+		{
+			std::cout << detectedColors[i];
+			if (i < detectedColorsCount - 1)
+			{
+				std::cout << ", ";
+			}
+			free(detectedColors[i]);
+		}
+		std::cout << std::endl;
+	}
+	else
+	{
+		std::cout << "No colors detected in blob " << blob->label << std::endl;
+	}
+}
+
 int main(void)
 {
 	// Decralação de uma variável para capturar o vídeo
@@ -150,25 +242,27 @@ int main(void)
 		vc_hsv_segmentation(img[2], img[3], 20, 50, 37, 100, 10, 100);
 
 		// Dilatar e erodir a imagem para remover ruído
-		img[4] = vc_image_new(video.width, video.height, 1, 255);
-		vc_binary_close(img[3], img[4], 3, 3);
+		// NÃO USAMOS PORQUE: não tem ganhos visíveis e aumenta o tempo de processamento
+		//vc_binary_close(img[3], img[4], 3, 3);
 
-		// Pesquisa de blobs
+		// // Pesquisa de blobs
 		int nblobs;
-		img[5] = vc_image_new(video.width, video.height, 1, 255);
-		OVC *blobs = vc_binary_blob_labelling(img[4], img[5], &nblobs);
+		img[4] = vc_image_new(video.width, video.height, 1, 255);
+		OVC *blobs = vc_binary_blob_labelling(img[3], img[4], &nblobs);
 		if (blobs != NULL)
 		{
 			// Informação dos blobs
-			vc_binary_blob_info(img[5], blobs, nblobs);
+			vc_binary_blob_info(img[4], blobs, nblobs);
 
 			// Percorrer os blobs
 			for (int i = 0; i < nblobs; i++)
 			{
 				// Desenhar o centro de gravidade
 				vc_draw_of_gravity(img[0], &blobs[i]);
-				// Desenhar as bordas
+				// Desenhar as bordas na imagem HSV
 				vc_draw_border_box(img[0], &blobs[i]);
+				// Identificar a cor das resistências
+				//identifyColorsInBorderBox(img[0], &blobs[i]);
 			}
 		}
 
@@ -181,7 +275,6 @@ int main(void)
 		vc_image_free(img[2]);
 		vc_image_free(img[3]);
 		vc_image_free(img[4]);
-		vc_image_free(img[5]);
 
 		// Exibe o frame
 		cv::imshow("VC - VIDEO", frame);

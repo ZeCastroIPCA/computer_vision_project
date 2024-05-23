@@ -78,6 +78,11 @@
         "text_encoding": "cpp",
         "cinttypes": "cpp",
         "semaphore": "cpp",
-        "shared_mutex": "cpp"
+        "shared_mutex": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "unordered_set": "cpp",
+        "__tree": "cpp",
+        "list": "cpp"
     }
 }
