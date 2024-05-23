@@ -759,6 +759,39 @@ OVC *vc_blob_gray_coloring(IVC *src, IVC *dst, OVC *blobs, int nblobs)
 	return blobs;
 }
 
+// Initialize union-find data structure
+int find(int *parent, int x)
+{
+	if (parent[x] != x)
+	{
+		parent[x] = find(parent, parent[x]); // path compression
+	}
+	return parent[x];
+}
+
+void union_sets(int *parent, int *rank, int x, int y)
+{
+	int rootX = find(parent, x);
+	int rootY = find(parent, y);
+
+	if (rootX != rootY)
+	{
+		if (rank[rootX] > rank[rootY])
+		{
+			parent[rootY] = rootX;
+		}
+		else if (rank[rootX] < rank[rootY])
+		{
+			parent[rootX] = rootY;
+		}
+		else
+		{
+			parent[rootY] = rootX;
+			rank[rootX]++;
+		}
+	}
+}
+
 OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 {
 	unsigned char *datasrc = (unsigned char *)src->data;
@@ -772,20 +805,27 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 	long int posX, posA, posB, posC, posD;
 	int labeltable[256] = {0};
 	int labelarea[256] = {0};
+	int ranktable[256] = {0};
 	int label = 1;
 	int num, tmplabel;
 	OVC *blobs;
 
 	// Verificação de erros
 	if ((src->width <= 0) || (src->height <= 0) || (src->data == NULL))
-		return 0;
+	{
+		printf("vc_binary_blob_labelling() --> Error: invalid image.\n");
+		return NULL;
+	}
 	if ((src->width != dst->width) || (src->height != dst->height) || (src->channels != dst->channels))
 	{
 		printf("vc_binary_blob_labelling() --> Input image and output image must have the same dimensions!\n");
 		return NULL;
 	}
 	if (channels != 1)
+	{
+		printf("vc_binary_blob_labelling() --> Error: input image must be binary.\n");
 		return NULL;
+	}
 
 	// Copy binary image data to grayscale image
 	memcpy(datadst, datasrc, bytesperline * height);
@@ -810,110 +850,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 		datadst[(height - 1) * bytesperline + x * channels] = 0;
 	}
 
-	// First pass: initial labeling
-	for (y = 1; y < height - 1; y++)
-	{
-		for (x = 1; x < width - 1; x++)
-		{
-			// Kernel:
-			// A B C
-			// D X
-
-			posA = (y - 1) * bytesperline + (x - 1) * channels; // A
-			posB = (y - 1) * bytesperline + x * channels;		// B
-			posC = (y - 1) * bytesperline + (x + 1) * channels; // C
-			posD = y * bytesperline + (x - 1) * channels;		// D
-			posX = y * bytesperline + x * channels;				// X
-
-			// If the pixel is marked
-			if (datadst[posX] != 0)
-			{
-				if ((datadst[posA] == 0) && (datadst[posB] == 0) && (datadst[posC] == 0) && (datadst[posD] == 0))
-				{
-					datadst[posX] = label;
-					labeltable[label] = label;
-					label++;
-				}
-				else
-				{
-					num = 255;
-
-					// If A is marked
-					if (datadst[posA] != 0)
-						num = labeltable[datadst[posA]];
-					// If B is marked and smaller than label "num"
-					if ((datadst[posB] != 0) && (labeltable[datadst[posB]] < num))
-						num = labeltable[datadst[posB]];
-					// If C is marked and smaller than label "num"
-					if ((datadst[posC] != 0) && (labeltable[datadst[posC]] < num))
-						num = labeltable[datadst[posC]];
-					// If D is marked and smaller than label "num"
-					if ((datadst[posD] != 0) && (labeltable[datadst[posD]] < num))
-						num = labeltable[datadst[posD]];
-
-					// Assign label to pixel
-					datadst[posX] = num;
-					labeltable[num] = num;
-
-					// Update the label table
-					if (datadst[posA] != 0)
-					{
-						if (labeltable[datadst[posA]] != num)
-						{
-							for (tmplabel = labeltable[datadst[posA]], a = 1; a < label; a++)
-							{
-								if (labeltable[a] == tmplabel)
-								{
-									labeltable[a] = num;
-								}
-							}
-						}
-					}
-					if (datadst[posB] != 0)
-					{
-						if (labeltable[datadst[posB]] != num)
-						{
-							for (tmplabel = labeltable[datadst[posB]], a = 1; a < label; a++)
-							{
-								if (labeltable[a] == tmplabel)
-								{
-									labeltable[a] = num;
-								}
-							}
-						}
-					}
-					if (datadst[posC] != 0)
-					{
-						if (labeltable[datadst[posC]] != num)
-						{
-							for (tmplabel = labeltable[datadst[posC]], a = 1; a < label; a++)
-							{
-								if (labeltable[a] == tmplabel)
-								{
-									labeltable[a] = num;
-								}
-							}
-						}
-					}
-					if (datadst[posD] != 0)
-					{
-						if (labeltable[datadst[posD]] != num)
-						{
-							for (tmplabel = labeltable[datadst[posD]], a = 1; a < label; a++)
-							{
-								if (labeltable[a] == tmplabel)
-								{
-									labeltable[a] = num;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// Second pass: relabel the image
+	// First pass: initial labeling with union-find
 	for (y = 1; y < height - 1; y++)
 	{
 		for (x = 1; x < width - 1; x++)
@@ -922,7 +859,51 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 
 			if (datadst[posX] != 0)
 			{
-				datadst[posX] = labeltable[datadst[posX]];
+				posA = (y - 1) * bytesperline + (x - 1) * channels; // A
+				posB = (y - 1) * bytesperline + x * channels;		// B
+				posC = (y - 1) * bytesperline + (x + 1) * channels; // C
+				posD = y * bytesperline + (x - 1) * channels;		// D
+
+				int minLabel = label;
+
+				if (datadst[posA] != 0)
+					minLabel = find(labeltable, datadst[posA]);
+				if (datadst[posB] != 0 && find(labeltable, datadst[posB]) < minLabel)
+					minLabel = find(labeltable, datadst[posB]);
+				if (datadst[posC] != 0 && find(labeltable, datadst[posC]) < minLabel)
+					minLabel = find(labeltable, datadst[posC]);
+				if (datadst[posD] != 0 && find(labeltable, datadst[posD]) < minLabel)
+					minLabel = find(labeltable, datadst[posD]);
+
+				if (minLabel == label)
+				{
+					labeltable[label] = label;
+					label++;
+				}
+
+				datadst[posX] = minLabel;
+				if (datadst[posA] != 0)
+					union_sets(labeltable, ranktable, datadst[posA], minLabel);
+				if (datadst[posB] != 0)
+					union_sets(labeltable, ranktable, datadst[posB], minLabel);
+				if (datadst[posC] != 0)
+					union_sets(labeltable, ranktable, datadst[posC], minLabel);
+				if (datadst[posD] != 0)
+					union_sets(labeltable, ranktable, datadst[posD], minLabel);
+			}
+		}
+	}
+
+	// Second pass: relabel the image using union-find
+	for (y = 1; y < height - 1; y++)
+	{
+		for (x = 1; x < width - 1; x++)
+		{
+			posX = y * bytesperline + x * channels; // X
+
+			if (datadst[posX] != 0)
+			{
+				datadst[posX] = find(labeltable, datadst[posX]);
 			}
 		}
 	}
@@ -948,13 +929,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 							int posN = ny * bytesperline + nx * channels;
 							if (datadst[posN] != 0 && datadst[posN] != datadst[posX])
 							{
-								int minLabel = (datadst[posX] < datadst[posN]) ? datadst[posX] : datadst[posN];
-								int maxLabel = (datadst[posX] > datadst[posN]) ? datadst[posX] : datadst[posN];
-								for (i = 0; i < size; i++)
-								{
-									if (datadst[i] == maxLabel)
-										datadst[i] = minLabel;
-								}
+								union_sets(labeltable, ranktable, datadst[posX], datadst[posN]);
 							}
 						}
 					}
@@ -963,7 +938,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 		}
 	}
 
-	// Re-label the image after merging close blobs
+	// Re-label the image after merging close blobs using union-find
 	for (y = 1; y < height - 1; y++)
 	{
 		for (x = 1; x < width - 1; x++)
@@ -972,7 +947,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 
 			if (datadst[posX] != 0)
 			{
-				datadst[posX] = labeltable[datadst[posX]];
+				datadst[posX] = find(labeltable, datadst[posX]);
 			}
 		}
 	}

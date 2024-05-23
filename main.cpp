@@ -35,6 +35,7 @@ void vc_timer(void)
 	}
 }
 
+// Identificar as cores presentes dentro de um blob
 void identifyColorsInBorderBox(IVC *srcdst, OVC *blob)
 {
 	int x, y, count = 0;
@@ -53,30 +54,41 @@ void identifyColorsInBorderBox(IVC *srcdst, OVC *blob)
 			int V = srcdst->data[index + 2];
 
 			// Determine the color name based on HSV values
-			if (S < 50 && V > 200)
+			if ((H > 5 && H < 12) && (S > 55 && S < 67) && (V > 60 && V < 73))
 			{
-				colorCounts[0]++; // White
+				colorCounts[0]++; // Red
 			}
-			else if (V < 50)
+			else if ((H > 0 && H < 5) && (S > 0 && S < 5) && (V > 0 && V < 5))
 			{
 				colorCounts[1]++; // Black
 			}
-			else
+			else if ((H > 0 && H < 5) && (S > 0 && S < 5) && (V > 95 && V < 100))
 			{
-				if (H < 10 || H >= 160)
-					colorCounts[2]++; // Red
-				else if (H < 25)
-					colorCounts[3]++; // Orange
-				else if (H < 35)
-					colorCounts[4]++; // Yellow
-				else if (H < 85)
-					colorCounts[5]++; // Green
-				else if (H < 110)
-					colorCounts[6]++; // Cyan
-				else if (H < 130)
-					colorCounts[7]++; // Blue
-				else
-					colorCounts[8]++; // Purple
+				colorCounts[2]++; // White
+			}
+			else if ((H > 5 && H < 12) && (S > 55 && S < 67) && (V > 73 && V < 85))
+			{
+				colorCounts[3]++; // Orange
+			}
+			else if ((H > 12 && H < 20) && (S > 55 && S < 67) && (V > 73 && V < 85))
+			{
+				colorCounts[4]++; // Yellow
+			}
+			else if ((H > 20 && H < 35) && (S > 55 && S < 67) && (V > 73 && V < 85))
+			{
+				colorCounts[5]++; // Green
+			}
+			else if ((H > 35 && H < 85) && (S > 55 && S < 67) && (V > 73 && V < 85))
+			{
+				colorCounts[6]++; // Cyan
+			}
+			else if ((H > 85 && H < 130) && (S > 55 && S < 67) && (V > 73 && V < 85))
+			{
+				colorCounts[7]++; // Blue
+			}
+			else if ((H > 130 && H < 160) && (S > 55 && S < 67) && (V > 73 && V < 85))
+			{
+				colorCounts[8]++; // Purple
 			}
 
 			count++;
@@ -109,22 +121,73 @@ void identifyColorsInBorderBox(IVC *srcdst, OVC *blob)
 	// Print the detected colors and separate them by blobs and only print the colors once per blob
 	if (detectedColorsCount > 0)
 	{
-		std::cout << "Detected colors in blob " << blob->label << ": ";
+		printf("Detected colors in blob %d: ", blob->label);
 		for (int i = 0; i < detectedColorsCount; i++)
 		{
-			std::cout << detectedColors[i];
+			printf("%s", detectedColors[i]);
 			if (i < detectedColorsCount - 1)
 			{
-				std::cout << ", ";
+				printf(", ");
 			}
 			free(detectedColors[i]);
 		}
-		std::cout << std::endl;
+		printf("\n");
 	}
 	else
 	{
-		std::cout << "No colors detected in blob " << blob->label << std::endl;
+		printf("No colors detected in blob %d\n", blob->label);
 	}
+
+	// Free the array of detected colors
+	free(detectedColors);
+}
+
+// Filtro de vermelho para detetar resistores dentro de um blob
+void redFilter(IVC *srcdst, OVC *blob)
+{
+	int x, y;
+	int index;
+	int H, S, V;
+	int red = -1;
+
+	// Iterate through 5 horizontal lines in the blob's bounding box center
+	for (y = blob->y + blob->height / 2 - 2; y < blob->y + blob->height / 2 + 3; y++)
+	{
+		// Iterate through each pixel in the blob's bounding box
+		for (x = blob->x; x < blob->x + blob->width; x++)
+		{
+			index = y * srcdst->bytesperline + x * srcdst->channels;
+			H = (int)((float)srcdst->data[index] / 255.0f * 360.0f);
+			S = (int)((float)srcdst->data[index + 1] / 255.0f * 100.0f);
+			V = (int)((float)srcdst->data[index + 2] / 255.0f * 100.0f);
+
+			// Determine the color name based on HSV values
+			if (((H > 0 && H < 10) || (H > 170 && H < 180)) && (S > 28 && S < 100) && (V > 19 && V < 100))
+			{
+				srcdst->data[index] = 0;
+				srcdst->data[index + 1] = 0;
+				srcdst->data[index + 2] = 255;
+				if (red == -1)
+				{
+					red = x;
+				}
+			}
+			else
+			{
+				srcdst->data[index] = 0;
+				srcdst->data[index + 1] = 0;
+				srcdst->data[index + 2] = 0;
+			}
+		}
+	}
+
+	// Print the width at which the red color is detected
+	if (red != -1)
+	{
+		printf("Red detected at width %d in blob %d\n", red, blob->label);
+	}
+	printf("Blob Width: %d\n", blob->width);
+	printf("\n");
 }
 
 int main(void)
@@ -243,7 +306,7 @@ int main(void)
 
 		// Dilatar e erodir a imagem para remover ruído
 		// NÃO USAMOS PORQUE: não tem ganhos visíveis e aumenta o tempo de processamento
-		//vc_binary_close(img[3], img[4], 3, 3);
+		// vc_binary_close(img[3], img[4], 3, 3);
 
 		// // Pesquisa de blobs
 		int nblobs;
@@ -257,17 +320,20 @@ int main(void)
 			// Percorrer os blobs
 			for (int i = 0; i < nblobs; i++)
 			{
-				// Desenhar o centro de gravidade
-				vc_draw_of_gravity(img[0], &blobs[i]);
-				// Desenhar as bordas na imagem HSV
-				vc_draw_border_box(img[0], &blobs[i]);
-				// Identificar a cor das resistências
-				//identifyColorsInBorderBox(img[0], &blobs[i]);
+				if (blobs[i].width > 0)
+				{
+					// Desenhar o centro de gravidade
+					vc_draw_of_gravity(img[0], &blobs[i]);
+					// Desenhar as bordas na imagem HSV
+					vc_draw_border_box(img[0], &blobs[i]);
+					// Identificar as cores presentes na borda do blob
+					redFilter(img[2], &blobs[i]);
+				}
 			}
 		}
 
 		// Copiar a imagem IVC para o frame
-		memcpy(frame.data, img[0]->data, video.width * video.height * 3);
+		memcpy(frame.data, img[2]->data, video.width * video.height * 3);
 
 		// Libertar memória das imagens
 		vc_image_free(img[0]);
