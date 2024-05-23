@@ -147,7 +147,7 @@ int main(void)
 
 		// Segmentação de uma imagem HSV
 		img[3] = vc_image_new(video.width, video.height, 1, 255);
-		vc_hsv_segmentation(img[2], img[3], 20, 50, 40, 100, 30, 100);
+		vc_hsv_segmentation(img[2], img[3], 20, 50, 37, 100, 10, 100);
 
 		// Dilatar e erodir a imagem para remover ruído
 		img[4] = vc_image_new(video.width, video.height, 1, 255);

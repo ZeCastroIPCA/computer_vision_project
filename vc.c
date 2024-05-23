@@ -651,28 +651,31 @@ int vc_draw_of_gravity(IVC *srcdst, OVC *blob)
 {
 	int c, x, y;
 
-	// Linha vertical
-	for (y = blob->yc - 2; y <= blob->yc + 2; y++)
+	if (blob->area < 7000)
 	{
-		// Verificar se y está dentro dos limites da imagem
-		if (y >= 0 && y < srcdst->height)
+		// Linha vertical
+		for (y = blob->yc - 2; y <= blob->yc + 2; y++)
 		{
-			for (c = 0; c < srcdst->channels; c++)
+			// Verificar se y está dentro dos limites da imagem
+			if (y >= 0 && y < srcdst->height)
 			{
-				srcdst->data[y * srcdst->bytesperline + blob->xc * srcdst->channels + c] = 255;
+				for (c = 0; c < srcdst->channels; c++)
+				{
+					srcdst->data[y * srcdst->bytesperline + blob->xc * srcdst->channels + c] = 255;
+				}
 			}
 		}
-	}
 
-	// Linha horizontal
-	for (x = blob->xc - 2; x <= blob->xc + 2; x++)
-	{
-		// Verificar se x está dentro dos limites da imagem
-		if (x >= 0 && x < srcdst->width)
+		// Linha horizontal
+		for (x = blob->xc - 2; x <= blob->xc + 2; x++)
 		{
-			for (c = 0; c < srcdst->channels; c++)
+			// Verificar se x está dentro dos limites da imagem
+			if (x >= 0 && x < srcdst->width)
 			{
-				srcdst->data[blob->yc * srcdst->bytesperline + x * srcdst->channels + c] = 255;
+				for (c = 0; c < srcdst->channels; c++)
+				{
+					srcdst->data[blob->yc * srcdst->bytesperline + x * srcdst->channels + c] = 255;
+				}
 			}
 		}
 	}
@@ -684,27 +687,30 @@ int vc_draw_border_box(IVC *srcdst, OVC *blob)
 {
 	int c, x, y;
 
-	// Bordas verticais
-	for (y = blob->y; y < blob->y + blob->height; y++)
+	if (blob->area < 7000)
 	{
-		for (c = 0; c < srcdst->channels; c++)
+		// Bordas verticais
+		for (y = blob->y; y < blob->y + blob->height; y++)
 		{
-			// Esquerda
-			srcdst->data[y * srcdst->bytesperline + blob->x * srcdst->channels + c] = 255;
-			// Direita
-			srcdst->data[y * srcdst->bytesperline + (blob->x + blob->width - 1) * srcdst->channels + c] = 255;
+			for (c = 0; c < srcdst->channels; c++)
+			{
+				// Esquerda
+				srcdst->data[y * srcdst->bytesperline + blob->x * srcdst->channels + c] = 255;
+				// Direita
+				srcdst->data[y * srcdst->bytesperline + (blob->x + blob->width - 1) * srcdst->channels + c] = 255;
+			}
 		}
-	}
 
-	// Bordas horizontais
-	for (x = blob->x; x < blob->x + blob->width; x++)
-	{
-		for (c = 0; c < srcdst->channels; c++)
+		// Bordas horizontais
+		for (x = blob->x; x < blob->x + blob->width; x++)
 		{
-			// Superior
-			srcdst->data[blob->y * srcdst->bytesperline + x * srcdst->channels + c] = 255;
-			// Inferior
-			srcdst->data[(blob->y + blob->height - 1) * srcdst->bytesperline + x * srcdst->channels + c] = 255;
+			for (c = 0; c < srcdst->channels; c++)
+			{
+				// Superior
+				srcdst->data[blob->y * srcdst->bytesperline + x * srcdst->channels + c] = 255;
+				// Inferior
+				srcdst->data[(blob->y + blob->height - 1) * srcdst->bytesperline + x * srcdst->channels + c] = 255;
+			}
 		}
 	}
 
@@ -930,9 +936,9 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 
 			if (datadst[posX] != 0)
 			{
-				for (int dy = -10; dy <= 10; dy++)
+				for (int dy = 0; dy <= 10; dy++)
 				{
-					for (int dx = 0; dx <= 35; dx++)
+					for (int dx = 0; dx <= 40; dx++)
 					{
 						int nx = x + dx;
 						int ny = y + dy;
