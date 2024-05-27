@@ -21,6 +21,187 @@
 //            FUN��ES: ALOCAR E LIBERTAR UMA IMAGEM
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+// Filtro de vermelho para detetar resistores dentro de um blob
+int vc_filtro_resistencias(IVC *srcdst, OVC *blob)
+{
+	int x, y;
+	int index;
+	int H, S, V;
+	int area;
+	int red, green, blue, black, brown, orange;
+	int total;
+	float red_percentage;
+	float green_percentage;
+	float blue_percentage;
+	float black_percentage;
+	float brown_percentage;
+	float orange_percentage;
+	int blackPos = 0;
+	int redPos = 0;
+	int greenPos = 0;
+	int bluePos = 0;
+	int brownPos = 0;
+	int orangePos = 0;
+
+	struct resistor
+	{
+		char stripe1[10];
+		char stripe2[10];
+		int stripe3;
+	};
+
+	// Get area of the box
+	area = blob->width * blob->height;
+
+	// Initialize color counters
+	red = green = blue = black = brown = orange = 0;
+
+	// Reset percentage values
+	red_percentage = green_percentage = blue_percentage = black_percentage = brown_percentage = orange_percentage = 0.0f;
+
+	// Iterate through 5 horizontal lines in the blob's bounding box center
+	for (y = blob->y + blob->height / 2 - 2; y < blob->y + blob->height / 2 + 3; y++)
+	{
+		// Iterate through each pixel in the blob's bounding box
+		for (x = blob->x; x < blob->x + blob->width; x++)
+		{
+			index = y * srcdst->bytesperline + x * srcdst->channels;
+			H = (int)((float)srcdst->data[index] / 255.0f * 360.0f);
+			S = (int)((float)srcdst->data[index + 1] / 255.0f * 100.0f);
+			V = (int)((float)srcdst->data[index + 2] / 255.0f * 100.0f);
+
+			// Determine the color name based on HSV values
+			// Black
+			if ((H > 0 && H < 360) && (S > 0 && S < 30) && (V > 0 && V < 30))
+			{
+				srcdst->data[index] = 255;
+				srcdst->data[index + 1] = 255;
+				srcdst->data[index + 2] = 255;
+				black++;
+				blackPos = x;
+			}
+			// Red
+			else if ((H > 0 && H < 10) && (S > 45 && S < 75) && (V > 60 && V < 80))
+			{
+				srcdst->data[index] = 0;
+				srcdst->data[index + 1] = 0;
+				srcdst->data[index + 2] = 255;
+				red++;
+				redPos = x;
+			}
+			// Orange
+			else if ((H > 5 && H < 17) && (S > 65 && S < 80) && (V > 80 && V < 100))
+			{
+				srcdst->data[index] = 0;
+				srcdst->data[index + 1] = 165;
+				srcdst->data[index + 2] = 255;
+				orange++;
+				orangePos = x;
+			}
+			// Green
+			else if (H > 85 && H < 110 && S > 15 && S < 45 && V > 25 && V < 55)
+			{
+				srcdst->data[index] = 0;
+				srcdst->data[index + 1] = 255;
+				srcdst->data[index + 2] = 0;
+				green++;
+				greenPos = x;
+			}
+			// Blue
+			else if (H > 180 && H < 215 && S > 20 && S < 50 && V > 30 && V < 55)
+			{
+				srcdst->data[index] = 255;
+				srcdst->data[index + 1] = 200;
+				srcdst->data[index + 2] = 150;
+				blue++;
+				bluePos = x;
+			}
+			// Brown
+			else if (H > 10 && H < 25 && S > 30 && S < 52 && V > 30 && V < 51)
+			{
+				srcdst->data[index] = 0;
+				srcdst->data[index + 1] = 255;
+				srcdst->data[index + 2] = 255;
+				brown++;
+				brownPos = x;
+			}
+		}
+	}
+
+	// Compare the number of pixels of each color summed up and determine what's the percentage of each color compared to the total area
+	total = red + green + blue + black + brown + orange;
+	red_percentage = (float)red / total * 100;
+	green_percentage = (float)green / total * 100;
+	blue_percentage = (float)blue / total * 100;
+	black_percentage = (float)black / total * 100;
+	brown_percentage = (float)brown / total * 100;
+	orange_percentage = (float)orange / total * 100;
+
+	// Print the results
+	// printf("Red: %.2f%%\n", red_percentage);
+	// printf("Green: %.2f%%\n", green_percentage);
+	// printf("Blue: %.2f%%\n", blue_percentage);
+	// printf("Black: %.2f%%\n", black_percentage);
+	// printf("Brown: %.2f%%\n", brown_percentage);
+	// printf("Orange: %.2f%%\n", orange_percentage);
+	// printf("Total: %d\n", total);
+	// printf("Area: %d\n", area);
+	// printf("\n\n");
+
+	// Compare the widths and order the colors and store its color in the resistor struct
+	struct resistor res;
+	// green, blue and red
+	if (greenPos < bluePos && bluePos < redPos)
+	{
+		strcpy(res.stripe1, "5");
+		strcpy(res.stripe2, "6");
+		res.stripe3 = 100;
+	}
+	// red, red and brown
+	else if (redPos < brownPos)
+	{
+		strcpy(res.stripe1, "2");
+		strcpy(res.stripe2, "2");
+		res.stripe3 = 10;
+	}
+	// brown, black, red
+	else if (brownPos < blackPos && blackPos < redPos)
+	{
+		strcpy(res.stripe1, "1");
+		strcpy(res.stripe2, "0");
+		res.stripe3 = 100;
+	}
+	// brown, black, orange
+	else if (brownPos < blackPos && blackPos < orangePos)
+	{
+		strcpy(res.stripe1, "1");
+		strcpy(res.stripe2, "0");
+		res.stripe3 = 1000;
+	}
+	// red, red, red
+	else
+	{
+		strcpy(res.stripe1, "2");
+		strcpy(res.stripe2, "2");
+		res.stripe3 = 100;
+	}
+
+	// Print the resistor value in ohms
+	//printf("Resistor value: %s %s %d\n", res.stripe1, res.stripe2, res.stripe3);
+
+	// Concatenate the resistor value in ohms
+	char resistorValue[10];
+	float tolerance = 0.05;
+	strcpy(resistorValue, res.stripe1);
+	strcat(resistorValue, res.stripe2);
+	int resValue = atoi(resistorValue) * res.stripe3 * (1 + tolerance);
+
+	// Print the resistor value in ohms
+	
+	//printf("Resistor value: %d\n", resValue);
+	return resValue;
+}
+
 // Filters
 int vc_gray_lowpass_min_filter(IVC *src, IVC *dst, int kernel)
 {

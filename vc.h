@@ -44,6 +44,8 @@ typedef struct
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 // Filters
+int vc_filtro_resistencias(IVC *srcdst, OVC *blob);
+
 int vc_gray_lowpass_min_filter(IVC *src, IVC *dst, int kernel);
 int vc_gray_lowpass_median_filter(IVC *src, IVC *dst, int kernel);
 int vc_gray_gaussian_filter(IVC *src, IVC *dst);
