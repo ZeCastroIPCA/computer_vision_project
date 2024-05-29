@@ -50,9 +50,19 @@ void vc_draw_resistance_value(IVC *srcdst, OVC *blob, int resistencia)
 	cv::Mat frame(srcdst->height, srcdst->width, CV_8UC3, srcdst->data);
 
 	// Escrever o valor da resistência na imagem
-	snprintf(str, sizeof(str), "%d", resistencia);
+	snprintf(str, sizeof(str), "Res: %d", resistencia);
 	cv::putText(frame, str, cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
 	cv::putText(frame, str, cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+
+	// Escrever à frente os valores com tolerância de 5%
+	// Min
+	snprintf(str, sizeof(str), "Min: %0.f", resistencia * 0.95);
+	cv::putText(frame, str, cv::Point(x, y - 30), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+	cv::putText(frame, str, cv::Point(x, y - 30), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+	snprintf(str, sizeof(str), "Max: %0.f", resistencia * 1.05);
+	// Max
+	cv::putText(frame, str, cv::Point(x, y - 60), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+	cv::putText(frame, str, cv::Point(x, y - 60), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
 
 	// Converter a imagem OpenCV para uma imagem IVC
 	memcpy(srcdst->data, frame.data, srcdst->width * srcdst->height * 3);

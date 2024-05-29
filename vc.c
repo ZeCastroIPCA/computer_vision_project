@@ -128,6 +128,8 @@ int vc_filtro_resistencias(IVC *srcdst, OVC *blob)
 		}
 	}
 
+	/*
+	//// DEBUGGING //////////////////////////////////////////
 	// Compare the number of pixels of each color summed up and determine what's the percentage of each color compared to the total area
 	total = red + green + blue + black + brown + orange;
 	red_percentage = (float)red / total * 100;
@@ -138,15 +140,16 @@ int vc_filtro_resistencias(IVC *srcdst, OVC *blob)
 	orange_percentage = (float)orange / total * 100;
 
 	// Print the results
-	// printf("Red: %.2f%%\n", red_percentage);
-	// printf("Green: %.2f%%\n", green_percentage);
-	// printf("Blue: %.2f%%\n", blue_percentage);
-	// printf("Black: %.2f%%\n", black_percentage);
-	// printf("Brown: %.2f%%\n", brown_percentage);
-	// printf("Orange: %.2f%%\n", orange_percentage);
-	// printf("Total: %d\n", total);
-	// printf("Area: %d\n", area);
-	// printf("\n\n");
+	printf("Red: %.2f%%\n", red_percentage);
+	printf("Green: %.2f%%\n", green_percentage);
+	printf("Blue: %.2f%%\n", blue_percentage);
+	printf("Black: %.2f%%\n", black_percentage);
+	printf("Brown: %.2f%%\n", brown_percentage);
+	printf("Orange: %.2f%%\n", orange_percentage);
+	printf("Total: %d\n", total);
+	printf("Area: %d\n", area);
+	printf("\n\n");
+	*/
 
 	// Compare the widths and order the colors and store its color in the resistor struct
 	struct resistor res;
@@ -157,12 +160,12 @@ int vc_filtro_resistencias(IVC *srcdst, OVC *blob)
 		strcpy(res.stripe2, "6");
 		res.stripe3 = 100;
 	}
-	// red, red and brown
-	else if (redPos < brownPos)
+	// brown, black, orange
+	else if (brownPos < blackPos && blackPos < orangePos)
 	{
-		strcpy(res.stripe1, "2");
-		strcpy(res.stripe2, "2");
-		res.stripe3 = 10;
+		strcpy(res.stripe1, "1");
+		strcpy(res.stripe2, "0");
+		res.stripe3 = 1000;
 	}
 	// brown, black, red
 	else if (brownPos < blackPos && blackPos < redPos)
@@ -171,12 +174,12 @@ int vc_filtro_resistencias(IVC *srcdst, OVC *blob)
 		strcpy(res.stripe2, "0");
 		res.stripe3 = 100;
 	}
-	// brown, black, orange
-	else if (brownPos < blackPos && blackPos < orangePos)
+	// red, red and brown
+	else if (redPos < brownPos)
 	{
-		strcpy(res.stripe1, "1");
-		strcpy(res.stripe2, "0");
-		res.stripe3 = 1000;
+		strcpy(res.stripe1, "2");
+		strcpy(res.stripe2, "2");
+		res.stripe3 = 10;
 	}
 	// red, red, red
 	else
@@ -187,18 +190,17 @@ int vc_filtro_resistencias(IVC *srcdst, OVC *blob)
 	}
 
 	// Print the resistor value in ohms
-	//printf("Resistor value: %s %s %d\n", res.stripe1, res.stripe2, res.stripe3);
+	// printf("Resistor value: %s %s %d\n", res.stripe1, res.stripe2, res.stripe3);
 
 	// Concatenate the resistor value in ohms
 	char resistorValue[10];
-	float tolerance = 0.05;
 	strcpy(resistorValue, res.stripe1);
 	strcat(resistorValue, res.stripe2);
-	int resValue = atoi(resistorValue) * res.stripe3 * (1 + tolerance);
+	int resValue = atoi(resistorValue) * res.stripe3;
 
 	// Print the resistor value in ohms
-	
-	//printf("Resistor value: %d\n", resValue);
+
+	// printf("Resistor value: %d\n", resValue);
 	return resValue;
 }
 
