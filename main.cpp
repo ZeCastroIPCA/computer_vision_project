@@ -175,12 +175,11 @@ int main(void)
 		vc_bgr_to_rgb(img[0], img[1]);
 
 		// Transformação de uma imagem RGB para HSV
-		img[2] = vc_image_new(video.width, video.height, 3, 255);
-		vc_rgb_to_hsv(img[1], img[2]);
+		vc_rgb_to_hsv(img[1], img[1]);
 
 		// Segmentação de uma imagem HSV
-		img[3] = vc_image_new(video.width, video.height, 1, 255);
-		vc_hsv_segmentation(img[2], img[3], 20, 50, 37, 100, 10, 100);
+		img[2] = vc_image_new(video.width, video.height, 1, 255);
+		vc_hsv_segmentation(img[1], img[2], 20, 50, 37, 100, 10, 100);
 
 		// Dilatar e erodir a imagem para remover ruído
 		// NÃO USAMOS PORQUE: não tem ganhos visíveis e aumenta o tempo de processamento
@@ -188,12 +187,11 @@ int main(void)
 
 		// // Pesquisa de blobs
 		int nblobs;
-		img[4] = vc_image_new(video.width, video.height, 1, 255);
-		OVC *blobs = vc_binary_blob_labelling(img[3], img[4], &nblobs);
+		OVC *blobs = vc_binary_blob_labelling(img[2], img[2], &nblobs);
 		if (blobs != NULL)
 		{
 			// Informação dos blobs
-			vc_binary_blob_info(img[4], blobs, nblobs);
+			vc_binary_blob_info(img[2], blobs, nblobs);
 
 			// Percorrer os blobs
 			for (int i = 0; i < nblobs; i++)
@@ -220,8 +218,6 @@ int main(void)
 		vc_image_free(img[0]);
 		vc_image_free(img[1]);
 		vc_image_free(img[2]);
-		vc_image_free(img[3]);
-		vc_image_free(img[4]);
 
 		// Exibe o frame
 		cv::imshow("VC - VIDEO", frame);
